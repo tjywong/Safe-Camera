@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+data/
+camera.json
+.DS_Store
+data_review/
