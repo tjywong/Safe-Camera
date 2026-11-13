@@ -16,46 +16,52 @@ The network runs as plain NumPy (`fingernet_numpy.py`), so the board needs only
 
 ## 1. Build the app on the laptop
 
-Run this after every retrain or combination change:
+Run this after every retrain, combination change or code change in `unoq/safe-lock`:
 
 ```bash
 python unoq/build_app.py
 ```
 
 This writes `safe-lock/python/fingernet.npz` and copies `lock_logic.py` and `config.py`
-(your `COMBINATION`). It also checks that the NumPy network matches PyTorch. It must
-print **OK** before you deploy.
+(your `COMBINATION`). It checks that the NumPy network matches PyTorch, and only if that
+passes (**OK**) it copies the whole app to `~/ArduinoApps/ArduinoApps/safe_lock`.
 
-## 2. Create the app in Arduino App Lab
+**Edit the app here in `unoq/safe-lock`, not in `ArduinoApps/safe_lock`.** The build
+overwrites that copy.
 
-Connect the UNO Q to the laptop over USB for setup.
+## 2. Deploy to the board
 
-1. App Lab → **Create new app**, for example named `safe-lock`.
-2. **Sketch:** replace `sketch.ino` with `unoq/safe-lock/sketch/sketch.ino`.
-3. **Library:** add **Servo** (version **1.3.0 or newer**; older versions don't support the UNO Q).
-4. **Python:** replace `main.py`, and put these files in the same `python/` folder:
-   `fingernet_numpy.py`, `lock_logic.py`, `config.py`, `requirements.txt`, `fingernet.npz`.
-   `fingernet.npz` is binary, so copy it over the network instead of pasting it. The app
-   folder on the board is normally `~/ArduinoApps/<app-name>`; check with `ls ~/ArduinoApps`.
-   ```bash
-   scp unoq/safe-lock/python/{fingernet.npz,fingernet_numpy.py,lock_logic.py,config.py,requirements.txt} \
-       arduino@<board-name>.local:~/ArduinoApps/safe-lock/python/
-   ```
+Uses the deploy tool in your ArduinoApps folder (USB/adb first, then WiFi):
+
+```bash
+cd ~/ArduinoApps/ArduinoApps
+python3 tools/deploy.py safe_lock
+```
+
+The first run takes a while. The board installs `numpy` + `opencv-python-headless`
+and compiles the sketch. The sketch drives the servo directly, with no Servo
+library: the Servo library's UNO Q build failed to link. To see more of the app's output:
+
+```bash
+python3 tools/deploy.py --cmd "arduino-app-cli app logs /home/arduino/ArduinoApps/safe_lock --tail 40"
+```
 
 ## 3. Hardware test first
 
-In `main.py` set `HARDWARE_TEST = True` and run the app. The console should show:
+Set `HARDWARE_TEST = True` in `unoq/safe-lock/python/main.py`, then rerun `build_app.py`
+and deploy. The logs should show:
 
-- `camera: /dev/videoN ...`, then once a second: `sees N fingers (…%), network NN ms`
+- `camera: /dev/videoN ...`, then about twice a second: `sees N fingers (…%), network NN ms`
 - LEDs and servo cycling every 3 s: both on → green + servo open → red blinking → off + locked
 - `BUTTON works` each time you press the button
 
 Fix anything that fails here before going on. Adjust `LOCKED_ANGLE` / `OPEN_ANGLE` in the
-sketch to fit your latch.
+sketch to fit your latch. After each move the servo stops being driven, so it goes quiet;
+set `SERVO_HOLD = true` if the latch needs it held actively.
 
 ## 4. Run the lock
 
-Set `HARDWARE_TEST = False` and run. Press the button: both LEDs light up. Show the three
+Set `HARDWARE_TEST = False`, rerun `build_app.py` and deploy again. Press the button: both LEDs light up. Show the three
 numbers, pulling your hand out of the box between them. LED and servo behavior:
 
 | Event | LEDs | Servo |
@@ -73,7 +79,7 @@ the laptop (`MIRROR = True`).
 
 ## 5. Run on the battery
 
-In App Lab, set the app to start automatically at boot. Then unplug the laptop and
+In App Lab, open the `safe_lock` app and set it to start automatically at boot. Then unplug the laptop and
 connect: battery → hub (USB-C PD input) → UNO Q, with the webcam in the hub's USB-A port.
 
 ## Troubleshooting

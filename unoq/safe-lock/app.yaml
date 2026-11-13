@@ -1,0 +1,5 @@
+name: Safe Lock
+description: Push the button, show a three-number finger code to the webcam, and a CNN decides whether the servo unlocks the safe
+ports: []
+bricks: []
+icon: 🔒

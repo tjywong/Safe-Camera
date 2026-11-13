@@ -42,8 +42,9 @@ Bridge.provide("button_pressed", on_button)
 def open_camera():
     indices = [CAMERA_INDEX] if CAMERA_INDEX is not None else range(10)
     for i in indices:
-        c = cv2.VideoCapture(i, cv2.CAP_V4L2)
+        c = cv2.VideoCapture(i)
         if c.isOpened():
+            c.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))  # less USB bandwidth
             c.set(cv2.CAP_PROP_FRAME_WIDTH, 640)    # same as on the laptop
             c.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
             c.set(cv2.CAP_PROP_BUFFERSIZE, 1)       # always use the newest frame

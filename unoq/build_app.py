@@ -7,6 +7,11 @@
 2. Copies lock_logic.py and config.py (your COMBINATION) into the app
 3. Checks the NumPy network gives the same answers as PyTorch on real photos,
    and that the NumPy preprocessing matches camera.py
+4. If it passes, copies the whole app to ~/ArduinoApps/ArduinoApps/safe_lock,
+   ready for:  cd ~/ArduinoApps/ArduinoApps && python3 tools/deploy.py safe_lock
+
+Edit the app HERE (unoq/safe-lock), not in ArduinoApps -- this script
+overwrites the copy there.
 """
 import shutil
 import sys
@@ -14,7 +19,10 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-APP_PY = ROOT / "unoq" / "safe-lock" / "python"
+APP = ROOT / "unoq" / "safe-lock"
+APP_PY = APP / "python"
+ARDUINO_APPS = Path.home() / "ArduinoApps" / "ArduinoApps"
+INSTALLED = ARDUINO_APPS / "safe_lock"
 sys.path.insert(0, str(ROOT))
 sys.path.append(str(APP_PY))   # after ROOT, so `import config` gets the project's config.py
 
@@ -73,7 +81,17 @@ def main():
     d = np.abs(preprocess(frame, net.img_size) - frame_to_input(frame, net.img_size)[0].numpy()).max()
     print(f"Preprocessing difference vs camera.py: {d:.1e}")
     ok = agree == len(paths) and max_diff < 1e-3 and d < 1e-5
-    print("OK - ready to copy to the UNO Q" if ok else "MISMATCH - do not deploy")
+    if not ok:
+        sys.exit("MISMATCH - not copying the app. Do not deploy.")
+    print("OK")
+
+    if not ARDUINO_APPS.is_dir():
+        print(f"{ARDUINO_APPS} not found - copy unoq/safe-lock to the board yourself.")
+        return
+    # Copy over (not delete-then-copy) so hidden App Lab folders like .cache survive.
+    shutil.copytree(APP, INSTALLED, ignore=shutil.ignore_patterns("__pycache__", ".*"), dirs_exist_ok=True)
+    print(f"Installed app to {INSTALLED}")
+    print(f"Deploy:  cd {ARDUINO_APPS} && python3 tools/deploy.py safe_lock")
 
 
 if __name__ == "__main__":
