@@ -6,13 +6,15 @@
  │  python/main.py                       sketch/sketch.ino        │
  │   webcam → FingerNet (NumPy)           button D2 ──notify──┐   │
  │   → lock_logic.py ──Bridge.call("set_state")──►            │   │
- │                       ◄──────────── "button_pressed" ──────┘   │
+ │                       ◄──── "button_long" / "button_short" ┘   │
  │                                        LEDs D5/D6, servo D9    │
  └────────────────────────────────────────────────────────────────┘
 ```
 
 The network runs as plain NumPy (`fingernet_numpy.py`), so the board needs only
-`numpy` and `opencv-python-headless`. No PyTorch or onnxruntime.
+`numpy`. No PyTorch or onnxruntime. OpenCV comes with the board's Python image
+(built with GStreamer for the camera); don't add `opencv-python-headless` to
+`requirements.txt`, it makes the install fail.
 
 ## 1. Build the app on the laptop
 
@@ -38,8 +40,7 @@ cd ~/ArduinoApps/ArduinoApps
 python3 tools/deploy.py safe_lock
 ```
 
-The first run takes a while. The board installs `numpy` + `opencv-python-headless`
-and compiles the sketch. The sketch drives the servo directly, with no Servo
+The first run takes a while. The board installs `numpy` and compiles the sketch. The sketch drives the servo directly, with no Servo
 library: the Servo library's UNO Q build failed to link. To see more of the app's output:
 
 ```bash
@@ -52,8 +53,11 @@ Set `HARDWARE_TEST = True` in `unoq/safe-lock/python/main.py`, then rerun `build
 and deploy. The logs should show:
 
 - `camera: /dev/videoN ...`, then about twice a second: `sees N fingers (…%), network NN ms`
-- LEDs and servo cycling every 3 s: both on → green + servo open → red blinking → off + locked
-- `BUTTON works` each time you press the button
+- LEDs and servo cycling every 3 s: both on → green + servo open → red on → off + locked
+- `BUTTON works (short press)` / `(long press)` each time you press the button (long = held 1 s)
+
+To test only the servo, set `SERVO_TEST_ANGLES = [0, 90]` (any angles): it swings
+between them every 3 s and skips the camera.
 
 Fix anything that fails here before going on. Adjust `LOCKED_ANGLE` / `OPEN_ANGLE` in the
 sketch to fit your latch. After each move the servo stops being driven, so it goes quiet;
@@ -61,17 +65,33 @@ set `SERVO_HOLD = true` if the latch needs it held actively.
 
 ## 4. Run the lock
 
-Set `HARDWARE_TEST = False`, rerun `build_app.py` and deploy again. Press the button: both LEDs light up. Show the three
-numbers, pulling your hand out of the box between them. LED and servo behavior:
+Set `HARDWARE_TEST = False`, rerun `build_app.py` and deploy again.
+
+**Hold the button for 1 s** (both LEDs flash), then show the three numbers, pulling your
+hand out of the box between them. Only a long press can open the lock: after a **short
+press** everything looks the same, but the attempt always ends as wrong, even with the
+right code. **Three wrong attempts in a row** (short-press ones and 20 s timeouts
+included) lock the button out for 30 s (`MAX_WRONG`, `LOCKOUT_SECONDS` in `config.py`).
 
 | Event | LEDs | Servo |
 |---|---|---|
-| Booting (waiting for Linux) | red solid | locked |
-| Button pressed, entering code | both on, blink off briefly per accepted digit | locked |
-| Correct code | green | open for 5 s, then relocks |
-| Wrong code / 20 s timeout | red blinking 3 s | locked |
+| Booting (waiting for Linux) | red solid | locked (0°) |
+| Button pressed, code entry starts | both flash once | locked |
+| Each digit registered (right or wrong) | both on, then off, once | locked |
+| Long press + correct code | green, until the button is pressed | open (90°) until the button is pressed |
+| Wrong code / short press / 20 s timeout | red, until the button is pressed | locked |
+| 3 wrong in a row | red blinking for 30 s, button ignored | locked |
 
-As a safety measure, the sketch relocks on its own after 10 s even if Linux crashes.
+The result only shows after the 3rd digit's flash. There's no automatic relock: the lock
+stays open until the button is pressed. The lockout survives restarts (saved in
+`lock_state.json` in the app folder on the board).
+
+### Camera page
+
+Open `http://<board-ip>:7000` to see what the camera sees: the live image with the
+square the network looks at, the predicted number and its confidence, all six class
+probabilities against the 80% threshold, a hold-steady bar, and dots for the digits
+entered so far. It doesn't show the digits themselves or whether a press was short or long.
 
 **Mount the webcam the same way it was during data collection:** same height and angle,
 looking down, with your arm entering from the same side. The images are mirrored like on

@@ -1,2 +1,3 @@
 numpy
-opencv-python-headless
+# OpenCV (cv2) comes with the board's Python image, built with GStreamer for the
+# camera. Listing opencv-python-headless here makes the install fail.

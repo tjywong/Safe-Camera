@@ -1,9 +1,11 @@
 """The safe lock, running on the laptop with the USB webcam.
 
-  SPACE = the safe's button      q = quit
+  SPACE = long press on the safe's button     s = short press     q = quit
 
 Press SPACE: the (on-screen) LEDs light up. Show the three numbers one at a
-time, making a fist or pulling your hand away between numbers.
+time, making a fist or pulling your hand away between numbers. Only a long
+press can open the lock: after a short press the attempt always ends as wrong.
+Three wrong attempts in a row lock the button out for LOCKOUT_SECONDS.
 """
 import time
 
@@ -18,9 +20,9 @@ from lock_logic import Lock, State
 
 PANEL_W = 260
 COLORS = {State.IDLE: (120, 120, 120), State.ENTERING: (0, 200, 255),
-          State.UNLOCKED: (0, 200, 0), State.DENIED: (0, 0, 230)}
+          State.UNLOCKED: (0, 200, 0), State.DENIED: (0, 0, 230), State.LOCKED_OUT: (0, 0, 160)}
 TEXT = {State.IDLE: "LOCKED - press button", State.ENTERING: "Enter code...",
-        State.UNLOCKED: "UNLOCKED", State.DENIED: "ACCESS DENIED"}
+        State.UNLOCKED: "UNLOCKED", State.DENIED: "ACCESS DENIED", State.LOCKED_OUT: "LOCKED OUT"}
 
 
 def draw_panel(h, lock, count, prob):
@@ -44,6 +46,12 @@ def draw_panel(h, lock, count, prob):
         if count is not None:
             cv2.putText(panel, f"sees: {count}  ({prob:.0%})", (10, 250),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.55, (180, 180, 180), 1)
+    elif lock.state == State.LOCKED_OUT:
+        left = lock.locked_until - time.time()
+        cv2.putText(panel, f"try again in {left:3.0f}s", (10, 180), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1)
+    if lock.wrong and lock.state != State.LOCKED_OUT:
+        cv2.putText(panel, f"wrong in a row: {lock.wrong}/{lock.max_wrong}", (10, 290),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 0, 230), 1)
     return panel
 
 
@@ -71,8 +79,8 @@ def main():
         k = cv2.waitKey(1) & 0xFF
         if k == ord("q"):
             break
-        if k == ord(" "):
-            lock.press_button(now)
+        if k in (ord(" "), ord("s")):
+            lock.press_button(now, long_press=(k == ord(" ")))
     cap.release()
     cv2.destroyAllWindows()
 

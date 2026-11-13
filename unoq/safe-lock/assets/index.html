@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Safe Lock</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Safe Lock</h1>
+        <span id="conn" class="pill off">connecting…</span>
+      </header>
+
+      <div id="banner" class="banner idle">Waiting for the camera…</div>
+      <p id="attempts" class="attempts" hidden></p>
+
+      <div class="view">
+        <img id="cam" alt="Camera view" />
+        <div id="nocam" class="dim">No image yet</div>
+      </div>
+      <p class="hint">The network only looks inside the orange square.</p>
+
+      <section class="card">
+        <div class="pred">
+          <div>
+            <div class="tag">Fingers seen</div>
+            <div class="big" id="count">–</div>
+          </div>
+          <div>
+            <div class="tag">Confidence</div>
+            <div class="big" id="conf">–</div>
+          </div>
+          <div>
+            <div class="tag">Code</div>
+            <div class="dots" id="dots"><span></span><span></span><span></span></div>
+          </div>
+        </div>
+
+        <div class="tag">Hold steady</div>
+        <div class="meter"><div id="hold"></div></div>
+
+        <div class="tag">All classes <span class="dim">· line = <span id="thr"></span> needed</span></div>
+        <div id="bars" class="bars"></div>
+      </section>
+    </main>
+    <script src="libs/socket.io.min.js"></script>
+    <script src="libs/arduino.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

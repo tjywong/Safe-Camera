@@ -15,11 +15,14 @@ NUM_CLASSES = 6
 SAVE_SIZE = 128   # size images are stored at on disk (room for crop augmentation)
 IMG_SIZE = 64     # size the network actually sees
 
-# The secret: three numbers, each 1-5, entered in order.
-COMBINATION = (3, 1, 4)
+# The secret: three numbers, each 1-5, entered in order. It only opens the lock
+# after a long press (hold the button ~1 s); after a short press it always
+# counts as wrong.
+COMBINATION = (1, 2, 5)
+MAX_WRONG = 3            # wrong attempts in a row before the lockout
+LOCKOUT_SECONDS = 30.0   # how long the button is ignored after that
 
 # Lock behaviour
 CONFIDENCE = 0.80      # softmax probability needed to trust a prediction
 STABLE_FRAMES = 8      # same answer this many frames in a row = "entered"
 ENTRY_TIMEOUT = 20.0   # seconds to enter all three digits after the button
-UNLOCK_SECONDS = 5.0   # how long the lock stays open
